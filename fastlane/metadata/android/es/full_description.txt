@@ -1,0 +1,15 @@
+Pulso Libre te ayuda a descubrir eventos, talleres, ferias y encuentros de tu comunidad.
+
+Consultá la propuesta, fecha, ubicación, flyers y audio opcional de cada evento. Hay eventos gratuitos con reserva y QR individual, de entrada libre sin reserva, y pagos mediante transferencia con revisión del comprobante por el organizador.
+
+Creá tu cuenta y confirmá el correo para gestionar entradas. En un evento pago, seguí las instrucciones de transferencia del organizador y adjuntá el comprobante. Las entradas se habilitan cuando el organizador aprueba el pago. Si el comprobante es rechazado, podés corregirlo dentro de la misma compra.
+
+Abrí Entradas para consultar tus accesos y mostrar el QR dinámico vigente al ingresar. Las entradas habilitadas para transferencia pueden asignarse a otra persona mediante el flujo de la app. El ingreso requiere validación y confirmación del servidor por parte del organizador; no se garantiza acceso sin conexión.
+
+Los organizadores crean eventos y revisan comprobantes desde el panel web. PLLABS no cobra comisiones por usar Pulso Libre; el precio de cada evento lo define su organizador.
+
+Este cliente necesita el servidor de PLLABS y no permite elegir otra instancia desde la interfaz. Los temas de SoundCloud elegidos por un organizador pueden cargar un reproductor web de ese proveedor. Los servicios de cuentas y eventos usan un backend no incluido en esta publicación de fuentes.
+
+El código y los recursos creados por el proyecto incluidos en esta distribución se publican bajo GPL-3.0-only, conservando los avisos de terceros. Una compilación distribuida con otra clave de firma no puede actualizar directamente una instalación firmada por el publicador original.
+
+powered by pllabs.com.ar

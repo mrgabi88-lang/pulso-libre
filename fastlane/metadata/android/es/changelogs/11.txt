@@ -1,0 +1,1 @@
+Preparación de las fuentes públicas bajo GPLv3. Conserva eventos, reservas gratuitas, compras con comprobante, entradas individuales con QR y transferencias de entradas. La compilación de fuentes admite un modo release sin firma explícito, sin credenciales privadas.

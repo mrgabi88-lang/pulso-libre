@@ -1,0 +1,1 @@
+Public source preparation under GPLv3. Keeps event discovery, free reservations, receipt-based purchases, individual QR tickets and ticket transfers. The public source build supports an explicit unsigned release mode without private signing credentials.

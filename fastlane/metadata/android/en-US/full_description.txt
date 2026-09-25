@@ -1,0 +1,15 @@
+Pulso Libre helps you discover events, workshops, fairs and community gatherings.
+
+Browse each event's description, date, location, flyers and optional audio. Events may offer free reservations with individual QR tickets, open admission without reservations, or organizer-managed payments with receipt review.
+
+Create an account and confirm your email to manage tickets. For paid events, follow the organizer's transfer instructions and upload a receipt. Tickets are enabled after the organizer approves the payment. Rejected receipts can be corrected within the same purchase.
+
+Open Tickets to view your admissions and show the current dynamic QR at the entrance. Ticket transfers are available for eligible tickets. Admission requires the organizer's server-confirmed validation; the app does not offer offline admission guarantees.
+
+Organizers create events and review receipts through the web panel. PLLABS does not charge commissions for using Pulso Libre; an event's ticket price is set by its organizer.
+
+This client requires the PLLABS server. It does not offer a user-selectable server. Organizer-selected SoundCloud tracks may load a third-party web player. Account and event services run on a backend that is not part of this source release.
+
+Source code and project-created resources in this distribution are available under GPL-3.0-only, with upstream notices preserved. A build distributed with a different signing key cannot directly update an installation signed by the original publisher.
+
+powered by pllabs.com.ar

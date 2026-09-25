@@ -1,0 +1,10 @@
+.gradle/
+.kotlin/
+.cxx/
+local.properties
+gradle/wrapper/gradle-wrapper.jar
+**/GeneratedPluginRegistrant.java
+*.iml
+key.properties
+**/*.jks
+**/*.keystore
