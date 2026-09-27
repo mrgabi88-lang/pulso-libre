@@ -62,7 +62,7 @@ class PulsoEvent {
       ? 'Difusión'
       : 'Consultar acceso';
   String get bookingLabel => isFreeReservation
-      ? 'Reservar gratis'
+      ? 'Solicitar entrada gratis'
       : isPaid
       ? 'Comprar entradas'
       : 'Ver detalles';
@@ -176,6 +176,9 @@ class AccessItem {
   String get status => string(data['status'], 'unknown');
   bool get receivedTransfer => data['received_transfer'] == true;
   bool get isFreeReservation => data['sale_mode'] == 'free';
+  bool get awaitingFreeApproval =>
+      isFreeReservation &&
+      {'pending_approval', 'pending_receipt', 'in_review'}.contains(status);
   int get qrVersion => integer(data['qr_version']);
   int? get pendingTransferId => integer(data['pending_transfer_id']) > 0
       ? integer(data['pending_transfer_id'])
@@ -191,6 +194,7 @@ class AccessItem {
       data['item_type'] == 'order' &&
       !receivedTransfer &&
       !isFreeReservation &&
+      data['can_upload_receipt'] != false &&
       {null, '', 'transfer_receipt'}.contains(data['payment_method']) &&
       data['requires_receipt'] != false &&
       !{'open', 'none'}.contains(data['sale_mode']) &&
@@ -202,9 +206,10 @@ class AccessItem {
             data['item_type'] == 'order' &&
             status == 'approved'
       ? 'Reserva confirmada'
-      : isFreeReservation &&
-            {'pending_receipt', 'in_review', 'rejected'}.contains(status)
-      ? 'Reserva por confirmar'
+      : awaitingFreeApproval
+      ? 'Pendiente de aprobación'
+      : isFreeReservation && status == 'rejected'
+      ? 'Solicitud rechazada'
       : switch (status) {
           'pending_receipt' => 'Falta el comprobante',
           'in_review' => 'Comprobante en revisión',
@@ -232,9 +237,10 @@ class AccessItem {
           status == 'approved' &&
           data['item_type'] == 'order'
       ? 'Tus entradas ya están disponibles. Abrí Mis entradas para mostrar el QR vigente al ingresar.'
-      : isFreeReservation &&
-            {'pending_receipt', 'in_review', 'rejected'}.contains(status)
-      ? 'Actualizá tus entradas para confirmar la reserva. No requiere pago ni comprobante.'
+      : awaitingFreeApproval
+      ? 'El organizador debe aprobar tu solicitud. El QR se habilitará cuando la apruebe. No requiere pago ni comprobante.'
+      : isFreeReservation && status == 'rejected'
+      ? 'El organizador rechazó tu solicitud. No se generó una entrada ni un QR.${string(data['review_notes']).trim().isEmpty ? '' : ' Motivo: ${string(data['review_notes']).trim()}'}'
       : switch (status) {
           'pending_payment' =>
             'Esta orden anterior sigue pendiente. Consultá al organizador para resolverla; no vuelvas a pagar sin confirmar su estado.',

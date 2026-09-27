@@ -1,0 +1,1 @@
+Las solicitudes gratuitas esperan la aprobación del organizador antes de habilitar el QR. Mantiene compras con comprobante, transferencias, biometría y datos de sesión. Fija Flutter y prepara paquetes por arquitectura.

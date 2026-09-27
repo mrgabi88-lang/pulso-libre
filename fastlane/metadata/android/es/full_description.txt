@@ -13,3 +13,5 @@ Este cliente necesita el servidor de PLLABS y no permite elegir otra instancia d
 El código y los recursos creados por el proyecto incluidos en esta distribución se publican bajo GPL-3.0-only, conservando los avisos de terceros. Una compilación distribuida con otra clave de firma no puede actualizar directamente una instalación firmada por el publicador original.
 
 powered by pllabs.com.ar
+
+En eventos gratuitos con QR, el organizador aprueba la solicitud antes de que se emita la entrada.

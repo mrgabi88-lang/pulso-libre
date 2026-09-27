@@ -33,11 +33,14 @@ Map<String, dynamic> _catalog(Map<String, dynamic> item) => {
   'featured_event_id': 202,
 };
 
-Map<String, dynamic> _freeOrder(int qty) => {
+Map<String, dynamic> _freeOrder(
+  int qty, {
+  String status = 'pending_approval',
+}) => {
   'id': 77,
   'event_id': 202,
   'ticket_qty': qty,
-  'status': 'approved',
+  'status': status,
   'sale_mode': 'free',
   'price_unit': 0,
   'amount_total': 0,
@@ -100,12 +103,15 @@ void main() {
   });
 
   test('free approval is not itself a QR and never requests a receipt', () {
-    final order = AccessItem({..._freeOrder(2), 'item_type': 'order'});
+    final order = AccessItem({
+      ..._freeOrder(2, status: 'approved'),
+      'item_type': 'order',
+    });
     expect(order.label, 'Reserva confirmada');
     expect(order.qrEnabled, isFalse);
     expect(order.canUpload, isFalse);
     final pending = AccessItem({...order.data, 'status': 'pending_receipt'});
-    expect(pending.label, 'Reserva por confirmar');
+    expect(pending.label, 'Pendiente de aprobación');
     expect(pending.canUpload, isFalse);
     final ticket = AccessItem({
       ...order.data,
@@ -122,14 +128,182 @@ void main() {
     );
   });
 
+  test(
+    'pending and rejected free requests ignore contradictory ticket capabilities',
+    () {
+      for (final status in ['pending_approval', 'rejected']) {
+        final request = AccessItem({
+          ..._freeOrder(1, status: status),
+          'item_type': 'order',
+          'ticket_id': 55,
+          'qr_enabled': true,
+          'can_transfer': true,
+          'can_upload_receipt': true,
+          'requires_receipt': true,
+        });
+        expect(request.qrEnabled, isFalse);
+        expect(request.canTransfer, isFalse);
+        expect(request.canUpload, isFalse);
+        expect(
+          request.label,
+          status == 'rejected'
+              ? 'Solicitud rechazada'
+              : 'Pendiente de aprobación',
+        );
+        expect(request.explanation, isNot(contains('enviá uno nuevo')));
+      }
+    },
+  );
+
+  test(
+    'purchase reload accepts pending approval and still rejects unknown status',
+    () async {
+      final session = await signedSession();
+      var status = 'pending_approval';
+      final api = ApiService(
+        config: localConfig(),
+        session: session,
+        client: MockClient((request) async {
+          expect(request.url.path, endsWith('/purchase_get.php'));
+          expect(request.url.queryParameters['order_id'], '77');
+          return response(200, {
+            'ok': true,
+            'order': _freeOrder(1, status: status),
+          });
+        }),
+      );
+      for (final known in ['pending_approval', 'rejected', 'approved']) {
+        status = known;
+        expect((await api.getPurchase(77))['status'], known);
+      }
+      status = 'unrecognized';
+      await expectLater(api.getPurchase(77), throwsA(isA<ApiException>()));
+      session.dispose();
+    },
+  );
+
+  for (final finalStatus in ['pending_approval', 'rejected']) {
+    testWidgets(
+      'free $finalStatus survives session restart without QR or receipt actions',
+      (tester) async {
+        _phone(tester);
+        final vault = MemoryVault();
+        var session = await signedSession(vault);
+        var status = 'pending_approval';
+        var ticketReads = 0;
+        final calls = <String>[];
+        final client = MockClient((request) async {
+          final endpoint = request.url.path.split('/').last;
+          calls.add(endpoint);
+          switch (endpoint) {
+            case 'me.php':
+              return response(200, {'ok': true, 'user': buyer});
+            case 'my_tickets.php':
+              ticketReads++;
+              return response(200, {
+                'ok': true,
+                'items': [
+                  {
+                    ..._freeOrder(2, status: status),
+                    'item_type': 'order',
+                    'order_id': 77,
+                    'event_title': 'TALLER DE CERÁMICA',
+                    'review_notes': status == 'rejected'
+                        ? 'Inscripción cerrada.'
+                        : '',
+                    'qr_enabled': false,
+                    'can_transfer': false,
+                    'can_upload_receipt': false,
+                  },
+                ],
+              });
+            case 'ticket_transfers.php':
+              return response(200, {
+                'ok': true,
+                'incoming': [],
+                'outgoing': [],
+              });
+            default:
+              fail(
+                'Free request must not call QR/upload/transfer mutations: $endpoint',
+              );
+          }
+        });
+        ApiService apiFor(SessionStore value) =>
+            ApiService(config: localConfig(), session: value, client: client);
+        Future<void> mount(ApiService api) async {
+          await tester.pumpWidget(
+            MaterialApp(
+              home: Scaffold(
+                body: TicketsScreen(
+                  api: api,
+                  onAccount: () =>
+                      fail('Authenticated request unexpectedly lost session'),
+                  onResume: (_) =>
+                      fail('Free request cannot resume receipt upload'),
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+        }
+
+        void expectLocked(String expected) {
+          expect(find.text(expected), findsOneWidget);
+          expect(find.text('Mostrar QR'), findsNothing);
+          expect(find.byType(QrImageView), findsNothing);
+          expect(find.text('Transferir entrada'), findsNothing);
+          expect(find.byKey(const ValueKey('resume-order-77')), findsNothing);
+          expect(find.text('Enviar nuevo comprobante'), findsNothing);
+          expect(find.byType(PaymentInfo), findsNothing);
+          expect(tester.takeException(), isNull);
+        }
+
+        await mount(apiFor(session));
+        expectLocked('Pendiente de aprobación');
+        status = finalStatus;
+        if (status == 'rejected') {
+          await _Navigation(tester).tap(find.byTooltip('Actualizar entradas'));
+          expectLocked('Solicitud rechazada');
+          expect(
+            find.textContaining('Motivo: Inscripción cerrada.'),
+            findsOneWidget,
+          );
+        }
+        await tester.pumpWidget(const SizedBox());
+        session.dispose();
+        session = SessionStore(vault: vault);
+        final restored = apiFor(session);
+        await restored.restoreSession(unlock: true);
+        expect(session.authenticated, isTrue);
+        await mount(restored);
+        expectLocked(
+          status == 'rejected'
+              ? 'Solicitud rechazada'
+              : 'Pendiente de aprobación',
+        );
+        expect(ticketReads, greaterThanOrEqualTo(2));
+        expect(calls.toSet(), {
+          'me.php',
+          'my_tickets.php',
+          'ticket_transfers.php',
+        });
+        await tester.pumpWidget(const SizedBox());
+        session.dispose();
+        client.close();
+      },
+    );
+  }
+
   testWidgets(
-    'free reservation retains event through login and shows server QR without receipt',
+    'free request retains event through login and shows QR only after organizer approval',
     (tester) async {
       _phone(tester);
       final nav = _Navigation(tester);
       final session = SessionStore(vault: MemoryVault());
       var creates = 0;
       var picks = 0;
+      var approved = false;
       final qrRequests = <int>[];
       final api = ApiService(
         config: localConfig(),
@@ -154,21 +328,33 @@ void main() {
               return response(200, {
                 'ok': true,
                 'items': [
-                  for (final id in [55, 56])
+                  if (!approved)
                     {
-                      'item_type': 'ticket',
-                      'id': id,
-                      'ticket_id': id,
+                      ..._freeOrder(2),
+                      'item_type': 'order',
                       'order_id': 77,
-                      'event_id': 202,
                       'event_title': 'TALLER DE CERÁMICA',
-                      'status': 'active',
-                      'sale_mode': 'free',
-                      'requires_receipt': false,
-                      'ticket_index': id - 54,
-                      'ticket_count': 2,
-                      'qr_enabled': true,
+                      'can_upload_receipt': false,
+                      'can_transfer': false,
+                      'qr_enabled': false,
                     },
+                  if (approved)
+                    for (final id in [55, 56])
+                      {
+                        'item_type': 'ticket',
+                        'id': id,
+                        'ticket_id': id,
+                        'order_id': 77,
+                        'event_id': 202,
+                        'event_title': 'TALLER DE CERÁMICA',
+                        'status': 'active',
+                        'sale_mode': 'free',
+                        'requires_receipt': false,
+                        'ticket_index': id - 54,
+                        'ticket_count': 2,
+                        'qr_enabled': true,
+                        'can_transfer': true,
+                      },
                 ],
               });
             case 'ticket_transfers.php':
@@ -203,7 +389,7 @@ void main() {
       expect(find.text('Gratis'), findsOneWidget);
       expect(find.text('Desde \$0'), findsNothing);
       await nav.tap(find.byKey(const ValueKey('buy-event-202')));
-      expect(find.text('Reservar gratis'), findsOneWidget);
+      expect(find.text('Solicitar entrada gratis'), findsOneWidget);
       expect(find.byType(EventTracks), findsNothing);
       expect(find.byKey(const ValueKey('event-audio-toggle')), findsNothing);
       expect(find.text('image:/taller-fondo.png'), findsOneWidget);
@@ -227,7 +413,7 @@ void main() {
       await nav.tap(find.text('2').last);
       await nav.tap(find.byKey(const ValueKey('create-order')));
       expect(creates, 1);
-      expect(find.text('Reserva confirmada'), findsOneWidget);
+      expect(find.text('Pendiente de aprobación'), findsOneWidget);
       expect(
         find.text('2 entradas · Gratis · Sin pago ni comprobante'),
         findsOneWidget,
@@ -235,6 +421,15 @@ void main() {
       expect(find.byKey(const ValueKey('upload-receipt')), findsNothing);
       expect(find.byType(PaymentInfo), findsNothing);
       await nav.tap(find.text('Ver mis entradas'));
+      expect(find.text('Pendiente de aprobación'), findsOneWidget);
+      expect(find.byType(QrImageView), findsNothing);
+      expect(find.text('Mostrar QR'), findsNothing);
+      expect(find.text('Transferir entrada'), findsNothing);
+      expect(find.byKey(const ValueKey('resume-order-77')), findsNothing);
+      expect(qrRequests, isEmpty);
+      expect(picks, 0);
+      approved = true;
+      await nav.tap(find.byTooltip('Actualizar entradas'));
       expect(find.byKey(const ValueKey('ticket-qr-55')), findsOneWidget);
       expect(find.byKey(const ValueKey('ticket-qr-56')), findsOneWidget);
       await nav.tap(
@@ -378,7 +573,7 @@ void main() {
       api = ApiService(config: localConfig(), session: session, client: client);
       await api.restoreSession(unlock: true);
       final restored = await api.createPurchase(202, 2);
-      expect(restored['status'], 'approved');
+      expect(restored['status'], 'pending_approval');
       expect(restored['requires_receipt'], isFalse);
       expect(seen[0], seen[1]);
       expect(committed, hasLength(1));

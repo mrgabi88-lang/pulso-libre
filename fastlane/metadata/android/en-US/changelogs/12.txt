@@ -1,0 +1,1 @@
+Free ticket requests wait for organizer approval before enabling the QR. Preserves receipt-based purchases, transfers, biometrics and session data. Pins Flutter and prepares per-ABI packages.

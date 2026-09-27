@@ -959,7 +959,10 @@ class _BuyScreenState extends State<BuyScreen> {
           Text(
             access != null
                 ? access.isFreeReservation
-                      ? 'Tu reserva'
+                      ? access.awaitingFreeApproval ||
+                                access.status == 'rejected'
+                            ? 'Tu solicitud'
+                            : 'Tu reserva'
                       : 'Tu compra'
                 : event?.canReserve == true
                 ? 'Tus entradas para este evento'
@@ -971,7 +974,7 @@ class _BuyScreenState extends State<BuyScreen> {
               (event?.canReserve == true || access != null)) ...[
             Text(
               event?.isFreeReservation == true
-                  ? 'Ingresá para reservar tus entradas gratis y recibir tu QR.'
+                  ? 'Ingresá para solicitar tus entradas gratis. El QR estará disponible después de la aprobación del organizador.'
                   : 'Ingresá para comprar entradas y enviar tu comprobante.',
             ),
             const SizedBox(height: 14),
@@ -1025,7 +1028,7 @@ class _BuyScreenState extends State<BuyScreen> {
             if (event.isFreeReservation) ...[
               const SizedBox(height: 12),
               const Text(
-                'Reservá tu lugar gratis. Recibís una entrada con QR para ingresar. Sin pago ni comprobante.',
+                'Solicitá tu entrada gratis. El organizador debe aprobarla antes de que se habilite el QR. Sin pago ni comprobante.',
               ),
             ],
             if (widget.api.session.authenticated && event.canReserve) ...[
@@ -1064,7 +1067,7 @@ class _BuyScreenState extends State<BuyScreen> {
                   _busy
                       ? 'Creando…'
                       : event.isFreeReservation
-                      ? 'Confirmar reserva'
+                      ? 'Enviar solicitud gratuita'
                       : 'Crear compra',
                 ),
               ),
@@ -1143,7 +1146,9 @@ class _BuyScreenState extends State<BuyScreen> {
       purchaseLabel: access == null
           ? event?.bookingLabel ?? 'Ver detalles'
           : access.isFreeReservation
-          ? 'Ver reserva'
+          ? access.awaitingFreeApproval || access.status == 'rejected'
+                ? 'Ver solicitud'
+                : 'Ver reserva'
           : 'Ver compra',
       onPurchase: () {
         final target = _purchaseAnchor.currentContext;

@@ -233,6 +233,7 @@ class ApiService {
     if (raw is! Map ||
         integer(raw['id']) != id ||
         !{
+          'pending_approval',
           'pending_receipt',
           'in_review',
           'rejected',

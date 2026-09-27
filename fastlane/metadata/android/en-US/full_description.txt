@@ -13,3 +13,5 @@ This client requires the PLLABS server. It does not offer a user-selectable serv
 Source code and project-created resources in this distribution are available under GPL-3.0-only, with upstream notices preserved. A build distributed with a different signing key cannot directly update an installation signed by the original publisher.
 
 powered by pllabs.com.ar
+
+For free QR events, the organizer approves the request before the ticket is issued.

@@ -107,3 +107,20 @@ flutter {
     source = "../.."
 }
 
+// Keep the universal APK's base version code for direct website updates.
+// Per-ABI source builds use deterministic codes for F-Droid's update checks.
+// Register after Flutter's variant callback, which sets its own ABI defaults.
+@Suppress("DEPRECATION")
+android.applicationVariants.configureEach {
+    val baseVersionCode = versionCode
+    val abiCodes = mapOf("armeabi-v7a" to 1, "arm64-v8a" to 2, "x86_64" to 3)
+    outputs.configureEach {
+        val apkOutput = this as? com.android.build.gradle.api.ApkVariantOutput
+        val abi = apkOutput?.getFilter(com.android.build.VariantOutput.FilterType.ABI)
+        if (abi != null) {
+            val abiCode = requireNotNull(abiCodes[abi]) { "Unsupported APK ABI: $abi" }
+            apkOutput.versionCodeOverride = baseVersionCode * 10 + abiCode
+        }
+    }
+}
+
